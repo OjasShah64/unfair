@@ -17,23 +17,25 @@
       </div>
 
       <div class="content">
-        <h2>Currently Recording</h2>
-        <div class="course-info">
-          <p class="course-name" id="currentCourse"></p>
-          <p class="course-details" id="currentDetails"></p>
-        </div>
-
-        <div class="timer">
-          <div class="timer-display">
-            <span class="timer-icon">⏱</span>
-            <span id="timerText">0:00:00</span>
+        <div class="currently-recording-section">
+          <h2>Currently Recording</h2>
+          <div class="recording-assignment-card">
+            <div class="assignment-header">
+              <h3 id="currentAssignmentName" class="assignment-title"></h3>
+              <div class="assignment-meta" id="currentDetails"></div>
+            </div>
+            <div class="recording-stats">
+              <div class="timer-display">
+                <span class="timer-icon">🕐</span>
+                <span id="timerText">0:00</span>
+              </div>
+              <div class="interaction-count" id="interactionCount">0 interactions</div>
+            </div>
+            <div class="button-group">
+              <button id="pauseBtn" class="btn btn-pause">⏸ Pause</button>
+              <button id="stopBtn" class="btn btn-stop">⊠ Stop & Export</button>
+            </div>
           </div>
-          <p class="interaction-count" id="interactionCount">0 interactions logged</p>
-        </div>
-
-        <div class="button-group">
-          <button id="pauseBtn" class="btn btn-pause">⏸ Pause</button>
-          <button id="stopBtn" class="btn btn-stop">⊠ Stop & Export</button>
         </div>
 
         <div class="assignments-section">

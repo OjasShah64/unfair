@@ -1,0 +1,33 @@
+{
+    "manifest_version": 3,
+    "name": "UNFAIR",
+    "version": "1.0.0",
+    "description": "Monitor AI usage with UNFAIR",
+    "permissions": [
+      "activeTab",
+      "storage",
+      "tabs"
+    ],
+    "background": {
+      "service_worker": "src/background.js"
+    },
+    "action": {
+      "default_popup": "src/popup/popup.html",
+      "default_icon": {
+        "128": "assests/icon128.png"
+      }
+    },
+    "content_scripts": [
+      {
+        "matches": ["<all_urls>"],
+        "js": ["src/content.js"],
+        "css": ["content.css"],
+        "run_at": "document_start"
+      }
+    ],
+    "host_permissions": [
+      "<all_urls>"
+    ]
+  }
+  
+  

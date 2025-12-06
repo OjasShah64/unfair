@@ -132,25 +132,32 @@ function injectRecordingPanel(assignmentId, assignmentName) {
   `;
 
   panelElement.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;gap:8px">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:rgba(0,0,0,0.1);border-bottom:1px solid rgba(255,255,255,0.1)">
       <div style="display:flex;align-items:center;gap:8px">
-        <div style="width:28px;height:28px;background:#fff;border-radius:6px;color:#dc2626;display:flex;align-items:center;justify-content:center;font-weight:700">U</div>
-        <div style="font-weight:800">UNFAIR</div>
+        <div style="width:8px;height:8px;background:#fff;border-radius:50%;animation:pulse 2s infinite"></div>
+        <div style="font-size:14px;font-weight:600;letter-spacing:0.5px">RECORDING</div>
       </div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <div style="font-size:12px;opacity:0.95">RECORDING</div>
-        <button id="unfair-close" title="Close" style="background:transparent;border:none;color:white;cursor:pointer;font-size:14px">✕</button>
-      </div>
+      <button id="unfair-close" title="Close" style="background:transparent;border:none;color:white;cursor:pointer;font-size:18px;width:20px;height:20px;display:flex;align-items:center;justify-content:center;line-height:1">✕</button>
     </div>
-    <div id="unfair-panel-body" style="padding:12px;background:transparent;color:white">
-      <div style="font-size:13px;margin-bottom:6px;opacity:0.95">${escapeHtml(assignmentName || 'Assignment')}</div>
-      <div style="font-size:18px;font-weight:800" id="unfair-panel-timer">0:00:00</div>
-      <div style="font-size:12px;opacity:0.9;margin-top:6px" id="unfair-panel-count">0 interactions logged</div>
-      <div style="display:flex;gap:8px;margin-top:10px">
-        <button id="unfair-pause" style="flex:1;background:rgba(255,255,255,0.12);border:none;color:white;padding:8px;border-radius:8px;cursor:pointer">Pause</button>
-        <button id="unfair-stop" style="flex:1;background:#ffffff;border:none;color:#dc2626;padding:8px;border-radius:8px;cursor:pointer">Stop</button>
+    <div id="unfair-panel-body" style="padding:16px;background:transparent;color:white">
+      <div style="font-size:18px;font-weight:600;margin-bottom:12px;color:#ffffff">${escapeHtml(assignmentName || 'Assignment')}</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="font-size:16px">🕐</span>
+        <div style="font-size:20px;font-weight:700;font-family:'Courier New',monospace" id="unfair-panel-timer">0:00</div>
       </div>
+      <div style="font-size:13px;opacity:0.9;margin-bottom:16px" id="unfair-panel-count">0 interactions logged</div>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <button id="unfair-pause" style="flex:1;background:#ffffff;border:none;color:#dc2626;padding:10px;border-radius:6px;cursor:pointer;font-size:14px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:6px">⏸ Pause</button>
+        <button id="unfair-stop" style="flex:1;background:transparent;border:1.5px solid #ffffff;color:#ffffff;padding:10px;border-radius:6px;cursor:pointer;font-size:14px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:6px">⊠ Stop</button>
+      </div>
+      <button id="unfair-back-home" style="width:100%;background:#ffffff;border:none;color:#dc2626;padding:10px;border-radius:6px;cursor:pointer;font-size:14px;font-weight:500">Back to Home</button>
     </div>
+    <style>
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+      }
+    </style>
   `;
 
   document.body.appendChild(panelElement);
@@ -165,18 +172,24 @@ function injectRecordingPanel(assignmentId, assignmentName) {
   document.getElementById('unfair-pause').addEventListener('click', (e) => {
     safeSendMessage({ type: 'TOGGLE_PAUSE' }, (resp) => {
       if (resp && resp.isPaused) {
-        e.target.textContent = 'Resume';
+        e.target.innerHTML = '▶ Resume';
       } else {
-        e.target.textContent = 'Pause';
+        e.target.innerHTML = '⏸ Pause';
       }
     });
   });
 
-  // wire close button
+  // Wire close button
   document.getElementById('unfair-close').addEventListener('click', () => {
     // hide but keep a small visible header so it can be re-opened by re-clicking the extension icon
     const body = document.getElementById('unfair-panel-body');
     if (body) body.style.display = 'none';
+  });
+
+  // Wire back to home button
+  document.getElementById('unfair-back-home').addEventListener('click', () => {
+    // Open extension popup
+    chrome.runtime.sendMessage({ type: 'OPEN_POPUP' });
   });
 
   console.log('[UNFAIR] Recording panel injected');
@@ -216,14 +229,20 @@ chrome.runtime.onMessage.addListener((msg) => {
       const hours = Math.floor(t / 3600);
       const minutes = Math.floor((t % 3600) / 60);
       const seconds = t % 60;
-      const formatted = `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+      // Format as MM:SS (or HH:MM if over an hour)
+      let formatted;
+      if (hours > 0) {
+        formatted = `${hours}:${String(minutes).padStart(2, '0')}`;
+      } else {
+        formatted = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+      }
       const timerEl = document.getElementById('unfair-panel-timer');
       if (timerEl) timerEl.textContent = formatted;
     }
     // Update interaction count if available
     if (panelElement) {
       const countEl = document.getElementById('unfair-panel-count');
-      if (countEl) countEl.textContent = `${interactions.length} interactions`;
+      if (countEl) countEl.textContent = `${interactions.length} interactions logged`;
     }
   }
 });
@@ -417,6 +436,12 @@ function captureInteraction(interaction) {
   );
 
   interactions.push(analyzedInteraction);
+  
+  // Update panel interaction count
+  const countEl = document.getElementById('unfair-panel-count');
+  if (countEl) {
+    countEl.textContent = `${interactions.length} interactions logged`;
+  }
 }
 
 function analyzeInteraction(interaction) {

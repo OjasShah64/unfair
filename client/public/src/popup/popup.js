@@ -118,11 +118,17 @@ function switchToLog() {
       console.log('[UNFAIR] Session stopped:', response);
       if (response && response.interactions) {
         state.interactions = response.interactions;
-        if (state.currentAssignment) state.currentAssignment.interactions = state.interactions;
+        if (state.currentAssignment) {
+          state.currentAssignment.interactions = state.interactions;
+          state.currentAssignment.status = 'done';
+        }
       }
       if (response && typeof response.recordingTime !== 'undefined') {
         state.recordingTime = response.recordingTime;
       }
+      // Update display after stopping
+      updateCurrentlyRecordingDisplay();
+      renderAssignments();
     }
   );
   
@@ -168,9 +174,6 @@ function createNewAssignment() {
   state.recordingTime = 0;
 
   saveState();
-  renderAssignments();
-  switchToScreen('home');
-  openRecordingModal();
   // show header recording badge
   if (recordingBadge) recordingBadge.classList.remove('hidden');
 
@@ -182,6 +185,8 @@ function createNewAssignment() {
     },
     (response) => {
       console.log('[UNFAIR] Session started:', response);
+      renderAssignments();
+      updateCurrentlyRecordingDisplay();
       startTimer();
     }
   );
@@ -193,7 +198,7 @@ function renderAssignments() {
   state.assignments.forEach((assignment) => {
     const card = document.createElement('div');
     card.className = 'assignment-card';
-    if (assignment.id === state.currentAssignment?.id) {
+    if (assignment.id === state.currentAssignment?.id && state.isRecording) {
       card.classList.add('active');
     }
 
@@ -221,9 +226,10 @@ function renderAssignments() {
     assignmentsList.appendChild(card);
   });
 
+  // Update currently recording display
+  updateCurrentlyRecordingDisplay();
+  
   if (state.currentAssignment) {
-    currentCourse.textContent = state.currentAssignment.course;
-    currentDetails.textContent = `Due ${state.currentAssignment.dueDate} • ${state.currentAssignment.interactions.length} interactions`;
     recordingAssignment.textContent = state.currentAssignment.name;
   }
 }
@@ -231,19 +237,19 @@ function renderAssignments() {
 function selectAssignment(id) {
   state.currentAssignment = state.assignments.find((a) => a.id === id);
   state.interactions = state.currentAssignment?.interactions || [];
-  renderAssignments();
-
-  // Start recording for this assignment and open the in-page recording panel
+  
+  // Start recording for this assignment - content script will show the panel on browser pages
   state.isRecording = true;
   state.isPaused = false;
   saveState();
 
   chrome.runtime.sendMessage({ type: 'START_SESSION', assignment: state.currentAssignment }, (response) => {
     console.log('[UNFAIR] START_SESSION response:', response);
-    // Open recording modal in popup for immediate controls
-    openRecordingModal();
-    // show header recording badge
+    // Show header recording badge
     if (recordingBadge) recordingBadge.classList.remove('hidden');
+    // Update home screen to show currently recording assignment
+    renderAssignments();
+    updateCurrentlyRecordingDisplay();
     startTimer();
   });
 }
@@ -304,14 +310,42 @@ function updateTimerDisplay() {
   const minutes = Math.floor((state.recordingTime % 3600) / 60);
   const seconds = state.recordingTime % 60;
 
-  const formatted = `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  // Format for home screen: MM:SS (or HH:MM if over an hour)
+  let formatted;
+  if (hours > 0) {
+    formatted = `${hours}:${String(minutes).padStart(2, '0')}`;
+  } else {
+    formatted = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  }
 
   timerText.textContent = formatted;
-  recordingTimer.textContent = formatted;
+  
+  // Format for modal: HH:MM:SS
+  const formattedFull = `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  recordingTimer.textContent = formattedFull;
 
   // Also update modal
   if (state.currentAssignment) {
     state.currentAssignment.recordingTime = state.recordingTime;
+  }
+}
+
+function updateCurrentlyRecordingDisplay() {
+  // Show/hide the "Currently Recording" section based on whether there's an active assignment
+  const currentlyRecordingSection = document.querySelector('.currently-recording-section');
+  const currentAssignmentName = document.getElementById('currentAssignmentName');
+  
+  if (state.currentAssignment && state.isRecording) {
+    // Show the section
+    if (currentlyRecordingSection) currentlyRecordingSection.style.display = 'block';
+    
+    // Update content
+    if (currentAssignmentName) currentAssignmentName.textContent = state.currentAssignment.name;
+    if (currentDetails) currentDetails.textContent = `${state.currentAssignment.course} • Due ${state.currentAssignment.dueDate}`;
+    if (interactionCount) interactionCount.textContent = `${state.currentAssignment.interactions.length} interactions`;
+  } else {
+    // Hide the section
+    if (currentlyRecordingSection) currentlyRecordingSection.style.display = 'none';
   }
 }
 
@@ -888,9 +922,7 @@ function loadState() {
       updateTimerDisplay();
 
       if (state.isRecording) {
-        // Open popup modal and sync current session data from background
-        openRecordingModal();
-        // show header recording badge when restoring state
+        // Show header recording badge when restoring state
         if (recordingBadge) recordingBadge.classList.remove('hidden');
         // Fetch current session details from background
         chrome.runtime.sendMessage({ type: 'GET_CURRENT_SESSION' }, (resp) => {
@@ -899,9 +931,14 @@ function loadState() {
             state.interactions = resp.interactions || state.interactions;
             if (state.currentAssignment) state.currentAssignment.interactions = state.interactions;
           }
+          updateCurrentlyRecordingDisplay();
           startTimer();
         });
+      } else {
+        updateCurrentlyRecordingDisplay();
       }
+    } else {
+      updateCurrentlyRecordingDisplay();
     }
   });
 }
