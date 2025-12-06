@@ -18,20 +18,6 @@
           <div id="recordingBadge" class="recording-badge hidden">● RECORDING</div>
         </div>
       </div>
-      <script>
-        // Inline minimal timestamp so it's visible even if popup.js errors
-        (function(){
-          try {
-            var el = document.getElementById('devVersion');
-            if (!el) return;
-            var now = new Date();
-            var txt = 'v ' + now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');
-            el.textContent = txt;
-            el.style.display = 'inline-block';
-            el.style.opacity = '1';
-          } catch(e){}
-        })();
-      </script>
 
       <div class="content">
         <h2>Currently Recording</h2>
