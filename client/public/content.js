@@ -1,5 +1,3 @@
-(function(){
-try {
 // Create browser outline (full box border)
 const borderTop = document.createElement('div');
 borderTop.id = 'unfair-border-top';
@@ -127,60 +125,4 @@ if (document.body) {
     // UI is already appended to documentElement, so it should be visible
   });
 }
-
-// ===== Dynamic Shape Support =====
-const SHAPE_CLASSES = ['rectangle','rounded','pill','diagonal','notch','ellipse','mixed'];
-
-function applyShape(shape) {
-  if (!shape) shape = 'rectangle';
-  const normalized = String(shape).toLowerCase();
-  const borderEls = document.querySelectorAll('.unfair-browser-border');
-  borderEls.forEach((el) => {
-    // remove previous shape- classes
-    SHAPE_CLASSES.forEach((s) => el.classList.remove(`shape-${s}`));
-    el.classList.add(`shape-${normalized}`);
-  });
-
-  if (extensionUI) {
-    SHAPE_CLASSES.forEach((s) => extensionUI.classList.remove(`shape-${s}`));
-    extensionUI.classList.add(`shape-${normalized}`);
-  }
-}
-
-// Init from storage
-try {
-  chrome.storage.local.get(['unfairShape'], (res) => {
-    const shape = (res && res.unfairShape) ? res.unfairShape : 'rectangle';
-    applyShape(shape);
-  });
-} catch (e) {
-  // In non-extension contexts this may fail silently
-  applyShape('rectangle');
-}
-
-// React to storage changes so popup can change shape live
-try {
-  chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === 'local' && changes.unfairShape) {
-      applyShape(changes.unfairShape.newValue);
-    }
-  });
-} catch (e) { /* ignore */ }
-
-// Also listen for direct runtime messages to set shape
-try {
-  chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-    if (msg && msg.type === 'SET_SHAPE' && msg.shape) {
-      applyShape(msg.shape);
-      // persist preference
-      try { chrome.storage.local.set({ unfairShape: msg.shape }); } catch (e) {}
-      if (sendResponse) sendResponse({ ok: true });
-    }
-  });
-} catch (e) { /* ignore in non-extension contexts */ }
-
-} catch (e) {
-  try { console.warn('[UNFAIR] content script init failed', e); } catch (ee) {}
-}
-})();
 
