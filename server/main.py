@@ -21,7 +21,10 @@ app = Flask(__name__)
 CORS(app)
 
 # Configuration
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///unfair.db')
+# Ensure database is created in the server directory
+db_path = os.path.join(os.path.dirname(__file__), 'unfair.db')
+db_uri = os.getenv('DATABASE_URL', f'sqlite:///{db_path}')
+app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
 app.config['JWT_EXPIRATION_HOURS'] = 24
@@ -201,16 +204,27 @@ def token_required(f):
         if 'Authorization' in request.headers:
             auth_header = request.headers['Authorization']
             try:
-                token = auth_header.split(' ')[1]
-            except IndexError:
-                return jsonify({'error': 'Invalid token format'}), 401
+                # Support both "Bearer <token>" and just "<token>"
+                parts = auth_header.split(' ')
+                token = parts[1] if len(parts) > 1 else parts[0]
+            except (IndexError, AttributeError):
+                return jsonify({
+                    'error': 'Invalid token format',
+                    'message': 'Expected: Authorization: Bearer <token>'
+                }), 401
 
         if not token:
-            return jsonify({'error': 'Missing authentication token'}), 401
+            return jsonify({
+                'error': 'Missing authentication token',
+                'message': 'Add Authorization header: Bearer <token>'
+            }), 401
 
         payload = verify_token(token)
         if not payload:
-            return jsonify({'error': 'Invalid or expired token'}), 401
+            return jsonify({
+                'error': 'Invalid or expired token',
+                'message': 'Token verification failed'
+            }), 401
 
         return f(payload['user_id'], *args, **kwargs)
 
@@ -218,6 +232,23 @@ def token_required(f):
 
 
 # ===== API ROUTES =====
+
+
+@app.route('/', methods=['GET'])
+def root():
+    """Root endpoint - API information"""
+    return jsonify({
+        'name': 'UNFAIR Backend API',
+        'version': '1.0.0',
+        'status': 'running',
+        'endpoints': {
+            'health': '/api/health',
+            'assignments': '/api/assignments',
+            'interactions': '/api/assignments/<id>/interactions',
+            'transcripts': '/api/assignments/<id>/transcript'
+        },
+        'documentation': 'All endpoints except /api/health require authentication'
+    }), 200
 
 
 # ===== Assignment Routes =====
@@ -433,7 +464,26 @@ def update_transcript_share(user_id, transcript_id):
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
-    return jsonify({'status': 'healthy', 'timestamp': datetime.utcnow().isoformat()}), 200
+    try:
+        # Test database connection
+        db.session.execute(db.text('SELECT 1'))
+        db_status = 'connected'
+    except Exception as e:
+        db_status = f'error: {str(e)}'
+    
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': datetime.utcnow().isoformat(),
+        'database': db_status,
+        'version': '1.0.0',
+        'endpoints': {
+            'root': '/',
+            'health': '/api/health',
+            'assignments': '/api/assignments (requires auth)',
+            'interactions': '/api/assignments/<id>/interactions (requires auth)',
+            'transcripts': '/api/assignments/<id>/transcript (requires auth)'
+        }
+    }), 200
 
 
 # ===== Error Handlers =====
@@ -456,14 +506,34 @@ def internal_error(error):
 def init_db():
     """Initialize database"""
     with app.app_context():
-        db.create_all()
-        print('Database initialized')
+        try:
+            db.create_all()
+            print('Database initialized')
+            print(f'Database location: {app.config["SQLALCHEMY_DATABASE_URI"]}')
+        except Exception as e:
+            print(f'Error initializing database: {e}')
+            raise
 
 
 # ===== MAIN =====
 
 
 if __name__ == '__main__':
-    init_db()
-    debug_mode = os.getenv('FLASK_ENV') == 'development'
-    app.run(host='0.0.0.0', port=5000, debug=debug_mode)
+    print('=' * 60)
+    print('UNFAIR Backend Server')
+    print('=' * 60)
+    print(f'Starting server on http://0.0.0.0:5000')
+    print(f'Health check: http://localhost:5000/api/health')
+    print('=' * 60)
+    
+    try:
+        init_db()
+        debug_mode = os.getenv('FLASK_ENV') == 'development'
+        print(f'Debug mode: {debug_mode}')
+        print('Server ready!')
+        print('=' * 60)
+        app.run(host='0.0.0.0', port=5000, debug=debug_mode)
+    except Exception as e:
+        print(f'Failed to start server: {e}')
+        import traceback
+        traceback.print_exc()
