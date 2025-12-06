@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>UNFAIR Recorder</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <!-- HOME SCREEN -->
+    <div id="homeScreen" class="screen active">
+      <div class="header">
+        <div class="logo">
+          <span class="logo-u">U</span>
+          <span class="logo-text">UNFAIR</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div id="devVersion" style="font-size:11px; color:rgba(255,255,255,0.85); opacity:0.9;">v?</div>
+          <div id="recordingBadge" class="recording-badge hidden">● RECORDING</div>
+        </div>
+      </div>
+      <script>
+        // Inline minimal timestamp so it's visible even if popup.js errors
+        (function(){
+          try {
+            var el = document.getElementById('devVersion');
+            if (!el) return;
+            var now = new Date();
+            var txt = 'v ' + now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');
+            el.textContent = txt;
+            el.style.display = 'inline-block';
+            el.style.opacity = '1';
+          } catch(e){}
+        })();
+      </script>
+
+      <div class="content">
+        <h2>Currently Recording</h2>
+        <div class="course-info">
+          <p class="course-name" id="currentCourse"></p>
+          <p class="course-details" id="currentDetails"></p>
+        </div>
+
+        <div class="timer">
+          <div class="timer-display">
+            <span class="timer-icon">⏱</span>
+            <span id="timerText">0:00:00</span>
+          </div>
+          <p class="interaction-count" id="interactionCount">0 interactions logged</p>
+        </div>
+
+        <div class="button-group">
+          <button id="pauseBtn" class="btn btn-pause">⏸ Pause</button>
+          <button id="stopBtn" class="btn btn-stop">⊠ Stop & Export</button>
+        </div>
+
+        <div class="assignments-section">
+          <div class="section-header">
+            <h3>Your Assignments</h3>
+            <button id="newAssignmentBtn" class="btn-new">+ New</button>
+          </div>
+          <div id="assignmentsList" class="assignments-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RECORDING MODAL (appears on top) -->
+    <div id="recordingModal" class="modal hidden">
+      <div class="modal-content recording-modal">
+        <div class="modal-header">
+          <div class="recording-indicator">
+            <span class="pulse"></span>
+            <span>RECORDING</span>
+          </div>
+          <button id="closeRecordingBtn" class="close-btn">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="timer-section">
+            <div class="timer-large" id="recordingTimer">0:2:34</div>
+            <div class="interaction-badge" id="recordingInteractions">12 interactions logged</div>
+          </div>
+
+          <div class="recording-buttons">
+            <button id="startRecordingBtn" class="btn btn-start-modal">▶ Start Recording</button>
+            <button id="pauseRecordingBtn" class="btn btn-pause-modal">⏸ Pause</button>
+            <button id="stopRecordingBtn" class="btn btn-stop-modal">⊠ Stop & Export</button>
+          </div>
+
+          <!-- Shape selector: choose overlay/panel silhouette to match Figma -->
+          <div class="shape-selector" id="shapeSelector">
+            <label class="shape-label">Shape</label>
+            <div class="shape-options">
+              <button class="shape-btn" data-shape="rectangle" title="Rectangle">▭</button>
+              <button class="shape-btn" data-shape="rounded" title="Rounded">◳</button>
+              <button class="shape-btn" data-shape="pill" title="Pill">◯</button>
+              <button class="shape-btn" data-shape="diagonal" title="Diagonal">◢</button>
+              <button class="shape-btn" data-shape="notch" title="Notch">▰</button>
+              <button class="shape-btn" data-shape="ellipse" title="Ellipse">○</button>
+            </div>
+          </div>
+
+          <div class="recording-info">
+            <p><strong>Currently Recording:</strong></p>
+            <p id="recordingAssignment"></p>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <small>Recording indicator to debug/toggle recording status</small>
+          <div id="diagnostics" class="diagnostics hidden"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INTERACTION LOG SCREEN -->
+    <div id="interactionLogScreen" class="screen hidden">
+      <div class="transcript-header">
+        <div class="verified-badge">✓ VERIFIED TRANSCRIPT</div>
+      </div>
+
+      <div class="transcript-content">
+        <div class="transcript-title">
+          <h1>AI Collaboration Transcript</h1>
+        </div>
+
+        <div class="student-info">
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="label">STUDENT</span>
+              <p id="studentName">John Doe (johndoe@illinois.edu)</p>
+            </div>
+            <div class="info-item">
+              <span class="label">COURSE</span>
+              <p id="courseName">CS 225 - Data Structures</p>
+            </div>
+            <div class="info-item">
+              <span class="label">DATE GENERATED</span>
+              <p id="dateGenerated">October 21, 2025, 3:42 PM</p>
+            </div>
+            <div class="info-item">
+              <span class="label">ASSIGNMENT DUE</span>
+              <p id="assignmentDue">October 25, 2025</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="collaboration-summary">
+          <h2>Collaboration Summary</h2>
+          <div class="summary-stats">
+            <div class="stat-card">
+              <div class="stat-number" id="totalInteractions">23</div>
+              <div class="stat-label">TOTAL<br>INTERACTIONS</div>
+              <div class="stat-desc">Student prompt + AI responses</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number" id="activeTime">2h 34m</div>
+              <div class="stat-label">ACTIVE AI TIME</div>
+              <div class="stat-desc">Recording time (pauses excluded)</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number" id="contentUsed">8</div>
+              <div class="stat-label">CONTENT USED</div>
+              <div class="stat-desc">AI responses copied/referenced</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number" id="aiAssistance">35%</div>
+              <div class="stat-label">AI ASSISTANCE</div>
+              <div class="stat-desc">Est. AI contribution to work</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="interaction-log">
+          <h2>Complete Interaction Log</h2>
+          <div id="logContainer" class="log-container"></div>
+        </div>
+
+        <div class="action-buttons">
+          <button id="exportBtn" class="btn btn-primary">📥 Download Transcript</button>
+          <button id="shareBtn" class="btn btn-secondary">🔗 Get Share Link</button>
+          <button id="backHomeBtn" class="btn btn-tertiary">← Back to Home</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
