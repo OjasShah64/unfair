@@ -36,5 +36,5 @@ python main.py
 3. Click **Load unpacked** and select the \client/public\ folder in this repository.
 4. The extension should now be active and visible in your browser toolbar!
 
-## ?? Architecture overview
+## Architecture overview
 See [architecture docs](docs/architecture.md) or the [Index](INDEX.md) for more details.
