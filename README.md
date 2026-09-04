@@ -1,6 +1,6 @@
 # Unfair: AI Ethics Chrome Extension
 
-## 🎯 Project Summary & Value
+## Project Summary & Value
 **Unfair** is a full-stack tool designed to monitor and visualize how AI tools are used during academic assignments. It consists of a Chrome extension that tracks copy/paste events and browser behavior, paired with a Python backend to store and analyze the data.
 
 **Why I found this valuable:** 
@@ -9,18 +9,18 @@ Developing this project allowed me to build a complete, end-to-end product archi
 
 Unfair is a full-stack tool designed to monitor and visualize how AI tools are used during academic assignments. It consists of a Chrome extension that tracks copy/paste events and browser behavior, paired with a Python backend to store and analyze the data.
 
-## ?? Features
+## Features
 *   **Browser Monitoring:** Tracks copy, paste, and tab-switching behavior to detect potentially unethical use of AI text generators.
 *   **Popup Dashboard:** A clean HTML/JS popup interface providing real-time feedback to the user.
 *   **Data Aggregation:** Python backend (using SQLite) that logs events and stores usage metrics securely.
 *   **Customizable Detection:** Flexible copyPasteDetector.js logic to identify large blocks of suspiciously acquired text.
 
-## ??? Tech Stack
+## Tech Stack
 *   **Client:** JavaScript, HTML, CSS (Chrome Extensions API V3)
 *   **Server:** Python (Flask/FastAPI), SQLite
 *   **Other:** .env configuration for secure API access
 
-## ?? Setup and Installation
+## Setup and Installation
 
 ### 1. Backend Server Setup
 \\\ash
